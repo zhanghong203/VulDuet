@@ -1,0 +1,9 @@
+# Copy this file to config.local.yml and insert a newly rotated key.
+# config.local.yml is ignored by Git.
+llm_profiles:
+  gpt4o_mini:
+    api_key: "replace-with-your-new-api-key"
+  deepseek_v3_2:
+    api_key: "replace-with-your-new-api-key"
+  gpt35_turbo:
+    api_key: "replace-with-your-new-api-key"

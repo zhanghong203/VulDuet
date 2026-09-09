@@ -1,0 +1,9 @@
+faiss-cpu
+FlagEmbedding
+matplotlib
+numpy
+openai
+pytest
+scikit-learn
+tqdm
+PyYAML

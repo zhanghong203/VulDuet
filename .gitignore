@@ -1,0 +1,26 @@
+# Credentials and local configuration
+src/config/config.local.yml
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Generated artifacts and private datasets
+output/
+logs/
+data/train/
+data/test/
+*.index
+*.npy
+*.log
