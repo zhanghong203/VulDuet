@@ -1,54 +1,44 @@
 # VulDuet
 
-VulDuet is a dual-path knowledge-augmented framework for LLM-based source-code vulnerability detection. It keeps normative security rules and historical vulnerability cases in separate retrieval and reasoning paths, converts both outputs into a shared evidence representation, and resolves agreement, complementarity, and conflict through evidence-grounded arbitration.
+VulDuet 是一个面向大语言模型源代码漏洞检测的**双路径知识增强框架**。框架将规范性安全规则与历史漏洞案例分别建模：规则知识路径用于判断代码是否违反安全约束，历史知识路径用于匹配相似的漏洞场景、触发条件与修复模式。两条路径产生的证据经过统一表示与仲裁，最终输出可追溯的漏洞判断。
 
-## Framework
+## 框架概览
 
-```mermaid
-flowchart LR
-    A[Target function] --> B[Security semantic analysis]
-    B --> C1[Rule query]
-    B --> C2[Historical query]
-    C1 --> D1[Rule retrieval]
-    D1 --> E1[Applicability and violation verification]
-    C2 --> D2[Historical retrieval]
-    D2 --> R[Reranking and scenario gating]
-    R --> E2[Cause, trigger, and repair reasoning]
-    E1 --> N[Normalized evidence records]
-    E2 --> N
-    N --> F[Evidence arbitration]
-    F --> G[Traceable vulnerability decision]
-```
+<p align="center">
+  <img src="docs/framework.png" alt="VulDuet 双路径漏洞检测框架" width="100%">
+</p>
 
-The current public implementation corresponds to the V4 retrieval pipeline and V3 evidence arbiter:
+VulDuet 的主要流程如下：
 
-1. **Security semantic analysis** extracts the purpose, security-sensitive objects, operations, data flow, and guards of a target function.
-2. **Rule knowledge path** retrieves SEI CERT-style rules and verifies whether each rule applies to concrete code facts and whether its constraint is violated.
-3. **Historical knowledge path** builds a scenario-oriented query, recalls historical vulnerability records, reranks them, and reasons over the strongest candidates.
-4. **Evidence normalization** records source, polarity, grounding, confidence, and provenance in a common schema.
-5. **Evidence arbitration** aligns risks, checks rebuttals, and produces the final label together with the primary evidence and decision mode.
+1. **安全语义分析（Security Semantic Analysis）**：从目标函数中提取功能目的、安全敏感对象、关键操作、数据流与保护条件。
+2. **规则知识路径（Rule Knowledge Path）**：检索 SEI CERT 风格安全规则，验证规则的适用性及约束是否被违反。
+3. **历史知识路径（Historical Knowledge Path）**：构造场景查询，召回历史漏洞知识，经重排与场景过滤后分析漏洞根因、触发条件和修复方式。
+4. **证据标准化（Evidence Normalization）**：将双路径结论统一为包含来源、极性、代码依据、置信度和溯源信息的证据记录。
+5. **证据仲裁（Evidence Arbitration）**：识别证据一致、互补或冲突关系，经风险对齐、反证检查和决策策略输出最终标签、主要证据与决策模式。
 
-## Repository layout
+当前公开实现对应 **V4 检索流程**与 **V3 证据仲裁器**。
+
+## 目录结构
 
 ```text
 src/
-  agent/          semantic analysis, path reasoning, reranking, and arbitration
-  config/         public model profiles and local-credential loader
-  dataset/        paired PrimeVul loader
-  embedding/      BGE embedding wrapper
-  retrival/       FAISS rule and historical-knowledge retrieval
-  evaluation/     paired and conventional evaluation metrics
-  util/           evidence schemas, leakage audit, logging, and result saving
-  test/           focused unit tests for the dual-path implementation
-  main_*_v4.py    PrimeVul and SVEN experiment entry points
-server_v4/        Linux setup, launch, and result-checking scripts
+  agent/          安全语义分析、双路径推理、重排与证据仲裁
+  config/         模型配置和本地凭据加载
+  dataset/        PrimeVul 成对样本加载器
+  embedding/      BGE 向量表示封装
+  retrival/       规则知识与历史知识的 FAISS 检索
+  evaluation/     常规指标与成对评估指标
+  util/           证据结构、数据泄漏审计、日志和结果保存
+  test/           双路径实现的单元测试
+  main_*_v4.py    PrimeVul 与 SVEN 实验入口
+server_v4/        Linux 环境配置、运行和结果检查脚本
 ```
 
-The directory name `retrival` is retained for compatibility with the current Python imports.
+目录名 `retrival` 为兼容现有 Python 导入路径而保留。
 
-## Installation
+## 环境安装
 
-Python 3.10 or newer is recommended.
+推荐使用 Python 3.10 或更高版本。
 
 ```bash
 git clone https://github.com/zhanghong203/VulDuet.git
@@ -56,7 +46,7 @@ cd VulDuet
 python -m venv .venv
 ```
 
-Activate the environment and install dependencies:
+激活虚拟环境并安装依赖：
 
 ```bash
 # Linux/macOS
@@ -68,17 +58,17 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-`FlagEmbedding` downloads the configured BGE model on first use. Set `RULE_RAG_EMBEDDING_DEVICE=cpu` to force CPU inference; otherwise the implementation uses `cuda:0` when CUDA is available.
+`FlagEmbedding` 会在首次运行时下载配置的 BGE 模型。设置 `RULE_RAG_EMBEDDING_DEVICE=cpu` 可强制使用 CPU；若未设置且 CUDA 可用，程序默认使用 `cuda:0`。
 
-## LLM configuration
+## 大模型配置
 
-Public model names and OpenAI-compatible endpoints are stored in `src/config/config.yml`. Adjust these endpoints to match your provider. Credentials must remain local:
+公开的模型名称与 OpenAI 兼容接口地址位于 `src/config/config.yml`。API 密钥只应保存在本地配置中：
 
 ```bash
 cp src/config/config.local.example.yml src/config/config.local.yml
 ```
 
-Then add the key only to `src/config/config.local.yml`:
+在 `src/config/config.local.yml` 中填写密钥：
 
 ```yaml
 llm_profiles:
@@ -86,11 +76,11 @@ llm_profiles:
     api_key: "YOUR_API_KEY"
 ```
 
-The local file is ignored by Git. Never commit API keys, tokens, or provider credentials.
+该本地文件已被 Git 忽略。请勿提交 API Key、访问令牌或其他服务凭据。
 
-## Data and knowledge preparation
+## 数据与知识库准备
 
-This repository intentionally does not redistribute PrimeVul, SVEN, generated model outputs, or local FAISS indexes. Obtain the datasets from their original providers and place them in the following locations:
+本仓库不直接分发 PrimeVul、SVEN、模型输出或本地 FAISS 索引。请从原始来源获取数据集，并按以下结构放置：
 
 ```text
 data/test/primevul_test_paired.jsonl
@@ -99,13 +89,13 @@ data/train/<primevul-training-split>.jsonl
 data/knowledge/rules.json
 ```
 
-The rule file is a JSON array. Each rule should include `rule_id`, `category`, `rule_full_title`, `risk_assessment`, and `extension_info`; the latter contains the risk description and optional compliant/noncompliant examples.
+规则文件为 JSON 数组。每条规则建议至少包含 `rule_id`、`category`、`rule_full_title`、`risk_assessment` 和 `extension_info`；其中 `extension_info` 保存风险描述以及可选的合规/不合规示例。
 
-Historical knowledge must be constructed from training data only. Do not use validation or test functions when building the knowledge base.
+历史漏洞知识库必须只由训练集构建，不得使用验证集或测试集函数，以避免数据泄漏。
 
-### Build the rule index
+### 构建规则知识索引
 
-The legacy rule builders use paths relative to `src/`, so run them from that directory:
+现有规则构建脚本使用相对于 `src/` 的路径，因此请在该目录下运行：
 
 ```bash
 cd src
@@ -114,16 +104,16 @@ python build_faiss.py
 cd ..
 ```
 
-This produces:
+生成文件：
 
 ```text
 output/step1/new_documents.json
 output/retrival/new_rule.index
 ```
 
-### Build the historical vulnerability index
+### 构建历史漏洞知识索引
 
-First audit the training split for leakage, then extract and index historical knowledge:
+先审计训练集的数据泄漏风险，再提取历史漏洞知识并建立索引：
 
 ```bash
 python -m src.audit_vulnerability_knowledge_v3 data/train/<primevul-training-split>.jsonl
@@ -133,16 +123,16 @@ python -m src.build_vulnerability_knowledge_v3 \
 python -m src.build_vulnerability_index_v3
 ```
 
-The resulting files are:
+生成文件：
 
 ```text
 output/step1/vulnerability_knowledge_v3_documents.json
 output/retrival/vulnerability_knowledge_v3.index
 ```
 
-## Running VulDuet
+## 运行 VulDuet
 
-Run a small PrimeVul smoke test first:
+建议先用少量 PrimeVul 样本完成冒烟测试：
 
 ```bash
 python -m src.main_primevul_dual_path_v4 \
@@ -155,7 +145,7 @@ python -m src.main_primevul_dual_path_v4 \
   --workers 1 --reasoning-workers 3 --limit 2
 ```
 
-Run the official 423-pair SVEN split:
+运行 SVEN 官方 423 对样本：
 
 ```bash
 python -m src.main_sven_dual_path_v4 \
@@ -169,9 +159,9 @@ python -m src.main_sven_dual_path_v4 \
   --workers 1 --reasoning-workers 3 --max-new 2
 ```
 
-Both entry points save after every completed pair and resume by sample ID. Result files contain the two path outputs, retrieved and reranked evidence, normalized evidence, path decisions, arbitration result, timing, and configuration metadata.
+两个入口都会在每对样本完成后保存结果，并依据样本 ID 支持断点续跑。结果包含双路径输出、召回与重排证据、标准化证据、路径判断、仲裁结果、耗时和配置元数据。
 
-## Evaluation
+## 结果评估
 
 ```bash
 python -m src.evaluation.evaluation_dual_path_v3 \
@@ -182,24 +172,24 @@ python -m src.evaluation.evaluate_sven_dual_path_v3 \
   output/result/sven/<result-file>.json
 ```
 
-The evaluators report conventional classification metrics together with pair-aware measures for vulnerable/patched discrimination.
+评估脚本同时报告常规分类指标，以及衡量漏洞版本与修复版本区分能力的成对评估指标。
 
-## Tests
+## 测试
 
-The unit tests use mocks and do not require an API key or model download:
+单元测试使用模拟对象，不需要 API Key，也不会下载模型：
 
 ```bash
 pytest -q src/test
 ```
 
-## Reproducibility and safety notes
+## 复现与安全说明
 
-- Keep rule and historical knowledge sources isolated until evidence normalization.
-- Build historical knowledge from training data only and retain the leakage-audit report.
-- Record retrieval thresholds, top-k values, model profile, and dataset version for every run.
-- Start with conservative concurrency because each sample can create multiple parallel LLM calls.
-- Generated predictions are research outputs, not a substitute for expert security review.
+- 在证据标准化之前，规则知识与历史漏洞知识应保持相互独立。
+- 历史知识只能由训练数据构建，并保留数据泄漏审计结果。
+- 每次实验需记录检索阈值、Top-K、模型配置和数据集版本。
+- 每个样本可能触发多个并行的大模型请求，初次运行建议采用较保守的并发设置。
+- 模型预测仅用于安全研究，不能替代人工代码审计和专业安全评估。
 
-## Citation
+## 引用
 
-The paper citation will be added after publication. If you use this repository before then, please cite the repository URL and the accessed commit hash.
+论文正式发表后将在此补充标准引用格式。在此之前，如使用本仓库，请引用仓库地址并注明访问时对应的 commit hash。
